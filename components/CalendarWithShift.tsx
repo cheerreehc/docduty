@@ -1,139 +1,244 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
+import Header from '@/components/ui/Header';
+import { useDoctor } from '@/contexts/DoctorContext';
+import { FontAwesome5 } from '@expo/vector-icons'; // เพิ่มตรง import ด้วย
+import React, { useState } from 'react';
 import {
-  Button,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+  Button, Modal, SafeAreaView, ScrollView, StyleSheet, Text,
+  TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
-import { useDoctor } from '../contexts/DoctorContext';
 
-// 👇 เพิ่ม type สำหรับ state
-type MarkingData = {
-  selected: boolean;
-  marked: boolean;
-  dotColor: string;
-  customStyles: {
-    container: object;
-    text: object;
-  };
-  name: string;
-};
+const pastel = ['#FEE2E2','#E0F2FE','#DCFCE7','#EDE9FE','#FFF7CD'];
 
 export default function CalendarWithShift() {
-  // const [selected, setSelected] = useState<Record<string, MarkingData>>({});
-  const [selected, setSelected] = useState<Record<string, { names: string[] }>>({});
-  const [modalVisible, setModalVisible] = useState(false);
-  const [currentDate, setCurrentDate] = useState('');
-  const [inputName, setInputName] = useState('');
-  const [markedDates, setMarkedDates] = useState<{ [date: string]: string[] }>({});
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
-  const { doctors } = useDoctor(); 
+  const { shifts, setShifts, doctors } = useDoctor();
 
-    useEffect(() => {
-    const loadData = async () => {
-      const data = await AsyncStorage.getItem('docduty-shifts');
-      if (data) {
-        setSelected(JSON.parse(data));
-      }
-    };
-    loadData();
-  }, []);
+  const [selDate, setSelDate] = useState<string|null>(null);
+  const [selDocs, setSelDocs] = useState<string[]>([]);
+  const [visible, setVisible] = useState(false);
 
+  const { width } = useWindowDimensions();
+  const isPad = width >= 768;
+  const cellW = isPad ? 80 : 46;
+  const cellH = isPad ? 82 : 58;
 
-  const handleDayPress = (day: DateData) => {
-  setSelectedDate(day.dateString);
-  setSelectedDoctors(markedDates[day.dateString] || []);
-  setModalVisible(true);
+  // สำหรับการเลือกเดือน 
+  const now = new Date();
+  const initMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [viewMonth, setViewMonth] = useState(initMonth);
+  const [selectedMonth, setSelectedMonth] = useState(initMonth);
+
+  const thaiMonths = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+  ];
+
+  const [monthModal, setMonthModal] = useState(false);
+  const openMonthPicker = () => setMonthModal(true);
+  const selectMonth = (monthIndex: number) => {
+    const [year] = selectedMonth.split('-');
+    const newMonth = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    setViewMonth(newMonth);
+    setSelectedMonth(newMonth);
+    setMonthModal(false);
+  };
+  // END OF สำหรับการเลือกเดือน 
+  
+  // กระโดดข้ามมาที่เดือนปัจจุบัน
+  const goToCurrentMonth = () => {
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    setViewMonth(thisMonth);
+    setSelectedMonth(thisMonth);
+  };
+  // END OF กระโดดข้ามมาที่เดือนปัจจุบัน
+
+  const onDayPress = (day: DateData) => {
+    setSelDate(day.dateString);
+    setSelDocs(shifts[day.dateString] || []);
+    setVisible(true);
   };
 
-  const handleSaveDoctors = () => {
-    if (selectedDate) {
-      setMarkedDates((prev) => ({
-        ...prev,
-        [selectedDate]: selectedDoctors,
-      }));
-    }
-    setModalVisible(false);
+  const saveDocs = () => {
+    if (selDate) setShifts(p => ({ ...p, [selDate]: selDocs }));
+    setVisible(false);
   };
 
-  const saveName = async () => {
-    setSelected((prev) => {
-      const existing = prev[currentDate]?.names || [];
-      const updated = {
-        ...prev,
-        [currentDate]: {
-          names: [...existing, inputName.trim()]
-        }
-      };
-
-      AsyncStorage.setItem('docduty-shifts', JSON.stringify(updated));
-      return updated;
+  const clearCurrentMonth = () => {
+    console.log('🧹 clear pressed');
+    setShifts(p => {
+      const out: typeof p = {};
+      Object.entries(p).forEach(([d, list]) => {
+        if (!d.startsWith(viewMonth)) out[d] = list;
+      });
+      return out;
     });
-
-    setModalVisible(false);
-    setInputName('');
   };
 
-
-  const openModal = (date: string) => {
-    console.log('เปิด modal วันที่:', date);
-      setCurrentDate(date);
-      setInputName('');
-      setModalVisible(true);
+  const countByDoc = () => {
+    const out: Record<string, number> = {};
+    Object.entries(shifts).forEach(([date, arr]) => {
+      if (date.startsWith(viewMonth)) {
+        arr.forEach(n => out[n] = (out[n] || 0) + 1);
+      }
+    });
+    return out;
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-          <Calendar
-            onDayPress={handleDayPress}
-            dayComponent={({ date, onPress}) => {
-              if (!date) return null; // ป้องกัน null
-              const doctorNames = markedDates[date.dateString] || [];
-              return (
-                <TouchableOpacity onPress={() => handleDayPress(date)} style={{ alignItems: 'center' }}>
-                  <Text>{date.day}</Text>
-                  {doctorNames.map((name, idx) => (
-                    <Text key={idx} style={{ fontSize: 10, color: 'blue' }}>
-                      {name}
-                    </Text>
-                  ))}
-                </TouchableOpacity>
-              );
-            }}
-          />
+      <Header />
 
-          <Text style={styles.title}>รายชื่อเวร</Text>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
+        {/* Month Selector + ปุ่มเดือนปัจจุบัน */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1000, marginBottom: 12 }}>
+          <TouchableOpacity onPress={goToCurrentMonth}>
+            <Text style={{ fontSize: 14, color: '#1d4ed8' }}> เดือนปัจจุบัน</Text>
+          </TouchableOpacity>
+        </View>
 
-        <Modal visible={modalVisible} transparent animationType="slide">
-          <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#00000099' }}>
-            <View style={{ backgroundColor: 'white', margin: 20, padding: 20, borderRadius: 10 }}>
-              <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 10 }}>เลือกหมอเวร</Text>
-              {doctors.map((name) => (
-                <TouchableOpacity
-                  key={name}
-                  onPress={() => {
-                    setSelectedDoctors((prev) =>
-                      prev.includes(name)
-                        ? prev.filter((n) => n !== name)
-                        : [...prev, name]
-                    );
-                  }}
-                >
-                  <Text style={{ padding: 8, backgroundColor: selectedDoctors.includes(name) ? '#d0f0c0' : '#eee', marginVertical: 4, borderRadius: 6 }}>
-                    {selectedDoctors.includes(name) ? '✅ ' : ''}{name}
+        
+        <View style={{ flexDirection: isPad ? 'row' : 'column', gap: isPad ? 40 : 20, width: '100%', maxWidth: 1000 }}>
+          {/* Calendar */}
+          <View style={{ flex: isPad ? 3 : undefined }}>
+            <Calendar
+                hideExtraDays={true} // ซ่อนวันที่อยู่นอกเดือน
+                // สำหรับเลือกเดือนผ่าน Modal
+                key={viewMonth}
+                current={viewMonth + '-01'}
+                onVisibleMonthsChange={(months) => {
+                  const m = months[0];
+                  const newMonth = `${m.year}-${String(m.month).padStart(2, '0')}`;
+                  setViewMonth(newMonth);
+                  setSelectedMonth(newMonth);
+                }}
+                renderHeader={(date) => {
+                  // date: dayjs string หรือ Date object
+                  const y = date.getFullYear();
+                  const m = date.getMonth(); // 0-11
+                  return (
+                    <TouchableOpacity onPress={openMonthPicker}>
+                      <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+                        📅 {thaiMonths[m]} {y}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }} // END OF สำหรับเลือกเดือนผ่าน Modal
+                // Custom ปุ่ม < > ใน lib
+                renderArrow={(direction) => (
+                    <View
+                      style={{
+                        backgroundColor: '#DBEAFE',
+                        padding: 8,
+                        borderColor: '#60A5FA',
+                        
+                        borderRadius: 8,
+                      }}
+                    >
+                      <FontAwesome5
+                        name={direction === 'left' ? 'chevron-left' : 'chevron-right'}
+                        size={18}
+                        color="#1D4ED8"
+                      />
+                    </View>
+                  )}// END OF Custom ปุ่ม < > ใน libç
+
+              style={{ width: isPad ? '100%' : width - 32 }}
+              theme={{ textDayFontSize: isPad ? 18 : 14 }}
+              dayComponent={({ date }) => {
+                if (!date) return null;
+                const names = shifts[date.dateString] || [];
+
+                const todayStr = new Date().toISOString().split('T')[0];
+                const isToday = date.dateString === todayStr;
+
+                return (
+                  <TouchableOpacity
+                    onPress={() => onDayPress(date)}
+                    style={{
+                      width: cellW, height: cellH, margin: 2, alignItems: 'center',
+                      justifyContent: 'center', borderRadius: 8, borderWidth: 0.8,
+                      borderColor: isToday ? '#60A5FA' : '#ddd', // 🔵 เส้นกรอบฟ้าถ้าวันนี้
+                      backgroundColor: isToday ? '#DBEAFE' : 'white', // 🔵 พื้นหลังฟ้าจาง
+                    }}>
+                    <Text style={{ fontWeight: 'bold', color: isToday ? '#1D4ED8' : '#000' }}> {date.day} </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 2, marginTop: 4 }}>
+                      {names.map(n => (
+                        <View key={n} style={{
+                          backgroundColor: pastel[doctors.indexOf(n) % pastel.length],
+                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10
+                        }}>
+                          <Text style={{ fontSize: 10 }}>{n}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+
+          {/* Summary */}
+          <View style={{ flex: 1 }}>
+            <View style={styles.rowHeader}>
+              <Text style={styles.title}>สรุปเวรประจำเดือน</Text>
+              <TouchableOpacity style={styles.btnClear} onPress={clearCurrentMonth}>
+                <Text style={styles.btnText}>🧹 เคลียร์</Text>
+              </TouchableOpacity>
+            </View>
+
+            {Object.entries(countByDoc()).map(([n, c]) => (
+              <View key={n} style={styles.row}>
+                <View style={[styles.pill, { backgroundColor: pastel[doctors.indexOf(n) % pastel.length] }]}>
+                  <Text style={{ fontSize: 13 }}>{n}</Text>
+                </View>
+                <Text style={{ marginLeft: 8, fontSize: 13 }}>{c} วัน</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Modal เลือกหมอเวร */}
+        <Modal visible={visible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>เลือกหมอเวร</Text>
+              {doctors.map(n => (
+                <TouchableOpacity key={n} onPress={() =>
+                  setSelDocs(p => p.includes(n) ? p.filter(x => x !== n) : [...p, n])
+                }>
+                  <Text style={{
+                    padding: 8, marginVertical: 4, borderRadius: 6,
+                    backgroundColor: selDocs.includes(n) ? '#d0f0c0' : '#eee'
+                  }}>
+                    {selDocs.includes(n) ? '✅ ' : ''}{n}
                   </Text>
                 </TouchableOpacity>
               ))}
-              <Button title="บันทึก" onPress={handleSaveDoctors} />
-              <Button title="ยกเลิก" onPress={() => setModalVisible(false)} color="gray" />
+              <Button title="บันทึก" onPress={saveDocs} />
+              <Button title="ยกเลิก" onPress={() => setVisible(false)} color="gray" />
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal เลือกเดือน */}
+        <Modal visible={monthModal} transparent animationType="fade">
+          <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#00000066', padding: 20 }}>
+            <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 12 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
+                เลือกเดือน
+              </Text>
+              {thaiMonths.map((m, i) => (
+                <TouchableOpacity key={i} onPress={() => selectMonth(i)}>
+                  <Text style={{
+                    padding: 10, textAlign: 'center', fontSize: 16,
+                    backgroundColor: i === parseInt(selectedMonth.split('-')[1]) - 1 ? '#cce5ff' : undefined
+                  }}>
+                    {m}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <Button title="ปิด" onPress={() => setMonthModal(false)} color="gray" />
             </View>
           </View>
         </Modal>
@@ -143,135 +248,16 @@ export default function CalendarWithShift() {
   );
 }
 
-const pastelColors = ['#FEE2E2', '#E0F2FE', '#DCFCE7', '#EDE9FE', '#FFF7CD'];
-
-const getColorByIndex = (index: number) => pastelColors[index % pastelColors.length];
-
-const CustomDayCell = ({
-  date,
-  names,
-  onPress
-}: {
-  date: string;
-  names: string[];
-  onPress?: () => void;
-}) => {
-  return (
-    <TouchableOpacity onPress={onPress} style={styles.dayCell}>
-      <Text style={styles.dayNumber}>{date.split('-')[2]}</Text>
-      <View style={styles.pillContainer}>
-        {names.slice(0, 2).map((name, index) => (
-          <View
-            key={index}
-            style={[styles.pill, { backgroundColor: getColorByIndex(index) }]}
-          >
-            <Text style={styles.pillText}>{name}</Text>
-          </View>
-        ))}
-        {names.length > 2 && (
-          <Text style={styles.moreText}>+{names.length - 2}</Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-};
-
 const styles = StyleSheet.create({
-  // 🌙 พื้นหลังมืดตอนเปิด Modal
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: '#00000099',
-    paddingHorizontal: 20,
-  },
+  rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 },
+  title: { fontSize: 18, fontWeight: 'bold' },
+  btnClear: { backgroundColor: '#EFEFEF', paddingHorizontal: 15, paddingVertical: 3, borderRadius: 16 },
+  btnText: { fontSize: 14, fontWeight: 'bold', color: "gray" },
 
-  // 📦 กล่อง modal สีขาว
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    elevation: 4,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
 
-  // 📝 หัวข้อ modal
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-
-  // 🧾 ช่องกรอกชื่อ
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 20,
-  },
-
-  // 🔘 ปุ่มบันทึก/ยกเลิก
-  btnGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-
-  // 📅 กล่องวันในปฏิทิน
-  dayCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4,
-    minHeight: 60,
-    borderWidth: 0.5,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    backgroundColor: '#fff',
-  },
-
-  // 🔢 เลขวันที่
-  dayNumber: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-
-  // 👤 ชื่อหมอ
-  nameText: {
-    fontSize: 11,
-    color: '#333',
-    lineHeight: 14,
-  },
-
-  // ➕ ตัวบอกจำนวนที่เหลือ
-  moreText: {
-    fontSize: 10,
-    color: '#888',
-  },
-
-  title: {
-  fontSize: 18,
-  fontWeight: 'bold',
-  marginTop: 20,
-  marginBottom: 10
-  },
-  pillContainer: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  justifyContent: 'center',
-  marginTop: 4,
-  gap: 2,
-},
-pill: {
-  paddingHorizontal: 6,
-  paddingVertical: 2,
-  borderRadius: 10,
-  backgroundColor: '#eee',
-},
-pillText: {
-  fontSize: 10,
-  color: '#333',
-}
-
+  modalOverlay: { flex: 1, justifyContent: 'center', backgroundColor: '#00000088', paddingHorizontal: 20 },
+  modalBox: { backgroundColor: 'white', padding: 22, borderRadius: 10 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
 });
-
-
-

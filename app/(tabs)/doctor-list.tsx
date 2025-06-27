@@ -9,7 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useDoctor } from '../../contexts/DoctorContext'; // 🔁 ปรับ path ให้ตรงโปรเจกต์คุณ
+import { useDoctor } from '../../contexts/DoctorContext';
 
 export default function DoctorListScreen() {
   const [doctorName, setDoctorName] = useState('');
@@ -17,7 +17,7 @@ export default function DoctorListScreen() {
 
   const handleAdd = () => {
     const name = doctorName.trim();
-    if (!name) return;
+    if (!name || doctors.includes(name)) return;
     addDoctor(name);
     setDoctorName('');
   };
@@ -38,11 +38,11 @@ export default function DoctorListScreen() {
 
       <FlatList
         data={doctors}
-        keyExtractor={(item, index) => `${item}-${index}`}
-        renderItem={({ item, index }) => (
+        keyExtractor={(item) => item}
+        renderItem={({ item }) => (
           <View style={styles.listItem}>
             <Text style={styles.doctorName}>{item}</Text>
-            <TouchableOpacity onPress={() => removeDoctor(index)}>
+            <TouchableOpacity onPress={() => removeDoctor(item)}>
               <Text style={styles.deleteText}>ลบ</Text>
             </TouchableOpacity>
           </View>

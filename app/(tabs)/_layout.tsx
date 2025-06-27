@@ -8,6 +8,8 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { FontAwesome5 } from '@expo/vector-icons';
 
+
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
@@ -26,14 +28,27 @@ export default function TabLayout() {
           default: {},
         }),
       }}>
-      <Tabs.Screen
-        name="doctor-list"
-        options={{
-          title: "รายชื่อหมอ",
-          tabBarIcon: ({ color }) => <FontAwesome5 name="user-md" size={20} color={color} />,
-        }}
-      />
-      
-    </Tabs>
+        {/* 1️⃣ แท็บ “ตารางเวร” (ไฟล์ index.tsx) */}
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'ตารางเวร',
+            tabBarIcon: ({ color }) => (
+              <FontAwesome5 name="calendar-alt" size={20} color={color} />
+            ),
+          }}
+        />
+
+       {/* 2️⃣ แท็บ “รายชื่อหมอ” */}
+        <Tabs.Screen
+          name="doctor-list"
+          options={{
+            title: 'รายชื่อหมอ',
+            tabBarIcon: ({ color }) => (
+              <FontAwesome5 name="user-md" size={20} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
   );
 }

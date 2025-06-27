@@ -1,13 +1,14 @@
 {
   "expo": {
-    "name": "docdutyapp",
-    "slug": "docdutyapp",
+    "name": "DocDuty",
+    "slug": "docduty",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "docdutyapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "platforms": ["ios", "android"],
     "ios": {
       "supportsTablet": true
     },
