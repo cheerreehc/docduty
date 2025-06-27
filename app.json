@@ -4,11 +4,19 @@
     "slug": "docduty",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/images/icon.png",
-    "scheme": "docdutyapp",
+    "icon": "./assets/images/docduty-icon.png",
+    "splash": {
+      "image": "./assets/images/splashscreen.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "scheme": "docduty",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -27,7 +35,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.cheerreehc.docduty"
     },
     "web": {
       "bundler": "metro",
@@ -48,6 +57,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bfc05729-2562-470e-8029-a4a1e89082b2"
+      }
     }
   }
 }

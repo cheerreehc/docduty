@@ -1,4 +1,4 @@
-import Header from '@/components/ui/Header';
+
 import { Doctor, useDoctor } from '@/contexts/DoctorContext';
 import { FontAwesome5 } from '@expo/vector-icons'; // เพิ่มตรง import ด้วย
 import React, { useState } from 'react';
@@ -92,21 +92,21 @@ export default function CalendarWithShift() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <Header />
-
+      
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
         {/* Month Selector + ปุ่มเดือนปัจจุบัน */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1000, marginBottom: 12 }}>
+        {/* <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1000, marginBottom: 12 }}>
           <TouchableOpacity onPress={goToCurrentMonth}>
             <Text style={{ fontSize: 14, color: '#1d4ed8' }}> เดือนปัจจุบัน</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         
         <View style={{ flexDirection: isPad ? 'row' : 'column', gap: isPad ? 40 : 20, width: '100%', maxWidth: 1000 }}>
           {/* Calendar */}
           <View style={{ flex: isPad ? 3 : undefined }}>
             <Calendar
+            
                 hideExtraDays={true} // ซ่อนวันที่อยู่นอกเดือน
                 // สำหรับเลือกเดือนผ่าน Modal
                 key={viewMonth}
@@ -123,8 +123,8 @@ export default function CalendarWithShift() {
                   const m = date.getMonth(); // 0-11
                   return (
                     <TouchableOpacity onPress={openMonthPicker}>
-                      <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
-                        📅 {thaiMonths[m]} {y}
+                      <Text style={{ fontFamily: 'PKRound', fontSize: 24, textAlign: 'center' }}> 
+                        {thaiMonths[m]} {y}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -133,7 +133,7 @@ export default function CalendarWithShift() {
                 renderArrow={(direction) => (
                     <View
                       style={{
-                        backgroundColor: '#DBEAFE',
+                        backgroundColor: '#EEFEFF',
                         padding: 8,
                         borderColor: '#60A5FA',
                         
@@ -143,7 +143,7 @@ export default function CalendarWithShift() {
                       <FontAwesome5
                         name={direction === 'left' ? 'chevron-left' : 'chevron-right'}
                         size={18}
-                        color="#1D4ED8"
+                        color="#26C6DA"
                       />
                     </View>
                   )}// END OF Custom ปุ่ม < > ใน libç
@@ -163,10 +163,10 @@ export default function CalendarWithShift() {
                     style={{
                       width: cellW, height: cellH, margin: 2, alignItems: 'center',
                       justifyContent: 'center', borderRadius: 8, borderWidth: 0.8,
-                      borderColor: isToday ? '#60A5FA' : '#ddd', // 🔵 เส้นกรอบฟ้าถ้าวันนี้
-                      backgroundColor: isToday ? '#DBEAFE' : 'white', // 🔵 พื้นหลังฟ้าจาง
+                      borderColor: isToday ? '#26C6DA' : '#ddd', // 🔵 เส้นกรอบฟ้าถ้าวันนี้
+                      backgroundColor: isToday ? '#EEFEFF' : 'white', // 🔵 พื้นหลังฟ้าจาง
                     }}>
-                    <Text style={{ fontWeight: 'bold', color: isToday ? '#1D4ED8' : '#000' }}> {date.day} </Text>
+                    <Text style={{ fontWeight: 'bold', color: isToday ? '#26C6DA' : '#000' }}> {date.day} </Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 2, marginTop: 4 }}>
                       {names.map((doc, i) => {
                         if (!doc?.firstName || !doc?.lastName || !doc?.year) return null;
@@ -188,9 +188,11 @@ export default function CalendarWithShift() {
           {/* Summary */}
           <View style={{ flex: 1 }}>
             <View style={styles.rowHeader}>
-              <Text style={styles.title}>สรุปเวรประจำเดือน</Text>
+            <Text style={{ fontFamily: 'PKRound', fontSize: 20, textAlign: 'center' }}>
+              🩺 สรุปเวรประจำเดือน
+            </Text>
               <TouchableOpacity style={styles.btnClear} onPress={clearCurrentMonth}>
-                <Text style={styles.btnText}>🧹 เคลียร์</Text>
+                <Text style={{ fontFamily: 'PKRound', fontSize: 16, textAlign: 'center' }}> 🧹 เคลียร์ตาราง</Text>
               </TouchableOpacity>
             </View>
 
@@ -201,7 +203,7 @@ export default function CalendarWithShift() {
                   📋 ยังไม่มีหมอที่ได้รับเวรในเดือนนี้
                 </Text>
                 <Text style={{ textAlign: 'left', fontSize: 14, marginTop: 6, color: '#555' }}>
-                  👉 คลิกวันที่ในปฏิทิน เพิ่มหมอเวรได้เลย
+                  👉🏻 คลิกวันที่ในปฏิทินเพื่อเพิ่มหมอเวรได้เลย
                 </Text>
               </View>
             ) : (
@@ -331,9 +333,9 @@ export default function CalendarWithShift() {
 
 const styles = StyleSheet.create({
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 },
-  title: { fontSize: 18, fontWeight: 'bold' },
+  title: { fontSize: 18, fontWeight: 'bold', fontFamily: 'PKRound' },
   btnClear: { backgroundColor: '#EFEFEF', paddingHorizontal: 15, paddingVertical: 3, borderRadius: 16 },
-  btnText: { fontSize: 14, fontWeight: 'bold', color: "gray" },
+  btnText: { fontSize: 14, fontWeight: 'bold', color: "gray" , fontFamily: 'PKRound'},
 
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },

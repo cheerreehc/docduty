@@ -1,4 +1,4 @@
-import Header from '@/components/ui/Header';
+import { Header } from '@/components/ui/Header';
 import { useDoctor } from '@/contexts/DoctorContext';
 import React, { useState } from 'react';
 import {
@@ -65,7 +65,7 @@ export default function DoctorListScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <Header />
+      <Header showGreeting={false} showToday={false} compact text = "รายชื่อหมอ" logoSize={{ width: 120, height: 50 } }/>  
           <Modal visible={modalVisible} animationType="fade" transparent>
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -82,7 +82,7 @@ export default function DoctorListScreen() {
                 <View style={styles.modalBackdrop}>
                   <TouchableWithoutFeedback onPress={() => {}}>
                     <View style={styles.modalContainer}>
-                      <Text style={styles.modalTitle}>เพิ่มหมอใหม่</Text>
+                      <Text style={{ fontFamily: 'PKRound', fontSize: 24, textAlign: 'center' }}>เพิ่มหมอใหม่</Text>
 
                       <View style={styles.formGroup}>
                         <Text style={styles.label}>Icon</Text>
@@ -158,12 +158,12 @@ export default function DoctorListScreen() {
           ListHeaderComponent={
             <View style={[styles.center, { marginBottom: 8 }]}>
               <View style={[styles.headerRow, { width: contentWidth }]}>
-                <Text style={styles.title}>รายชื่อหมอ</Text>
+                <Text style={{ fontFamily: 'PKRound', fontSize: 24, textAlign: 'center' }}>รายชื่อหมอ</Text>
                 <TouchableOpacity
                   style={styles.addButton}
                   onPress={() => setModalVisible(true)}
                 >
-                  <Text style={styles.addButtonText}>➕ เพิ่มหมอ</Text>
+                  <Text style={{ fontFamily: 'PKRound', fontSize: 14, textAlign: 'center' }}>➕ เพิ่มหมอ</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 20,
+    fontFamily: 'PKRound'
   },
   inputGroup: {
     gap: 12,
@@ -267,20 +268,22 @@ const styles = StyleSheet.create({
   justifyContent: 'center',
   alignItems: 'center',
 },
-modalTitle: {
-  fontSize: 18,
-  fontWeight: 'bold',
-  marginBottom: 12,
-  textAlign: 'center',
-},
+// modalTitle: {
+//   fontSize: 18,
+//   fontWeight: 'bold',
+//   marginBottom: 12,
+//   textAlign: 'center',
+//   fontFamily: 'PKRound'
+// },
 formGroup: {
   marginBottom: 16,
 },
 label: {
-  fontSize: 14,
+  fontSize: 16,
   fontWeight: '500',
   marginBottom: 6,
   color: '#333',
+  fontFamily: 'PKRound'
 },
 inputFull: {
   borderWidth: 1,
@@ -288,7 +291,7 @@ inputFull: {
   paddingVertical: 10,
   paddingHorizontal: 14,
   borderRadius: 8,
-  fontSize: 16,
+  fontSize: 14,
   backgroundColor: '#fff',
 },
 modalContainer: {
@@ -307,6 +310,7 @@ modalButtonRow: {
   flexDirection: 'row',
   justifyContent: 'space-between',
   marginTop: 24,
+  fontFamily: 'PKRound',
 },
 card: {
   width: '100%',

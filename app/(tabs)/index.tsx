@@ -1,32 +1,15 @@
-import { StyleSheet } from 'react-native';
-
-
+import { Header } from '@/components/ui/Header';
 import { SafeAreaView } from 'react-native';
 import CalendarWithShift from '../../components/CalendarWithShift';
 
+
+
 export default function Page() {
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <Header showGreeting={false} showToday={false} compact text = "ตารางเวร" logoSize={{ width: 120, height: 50 } }/>  
       <CalendarWithShift />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
