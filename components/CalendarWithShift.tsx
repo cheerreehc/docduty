@@ -1,20 +1,22 @@
 import Header from '@/components/ui/Header';
-import { useDoctor } from '@/contexts/DoctorContext';
+import { Doctor, useDoctor } from '@/contexts/DoctorContext';
 import { FontAwesome5 } from '@expo/vector-icons'; // เพิ่มตรง import ด้วย
 import React, { useState } from 'react';
 import {
   Button, Modal, SafeAreaView, ScrollView, StyleSheet, Text,
-  TouchableOpacity, useWindowDimensions, View,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  useWindowDimensions, View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 
 const pastel = ['#FEE2E2','#E0F2FE','#DCFCE7','#EDE9FE','#FFF7CD'];
 
 export default function CalendarWithShift() {
-  const { shifts, setShifts, doctors } = useDoctor();
+  const { shifts, setShifts, doctors } = useDoctor(); // doctors: Doctor[]
 
   const [selDate, setSelDate] = useState<string|null>(null);
-  const [selDocs, setSelDocs] = useState<string[]>([]);
+  const [selDocs, setSelDocs] = useState<Doctor[]>([]);
   const [visible, setVisible] = useState(false);
 
   const { width } = useWindowDimensions();
@@ -79,7 +81,10 @@ export default function CalendarWithShift() {
     const out: Record<string, number> = {};
     Object.entries(shifts).forEach(([date, arr]) => {
       if (date.startsWith(viewMonth)) {
-        arr.forEach(n => out[n] = (out[n] || 0) + 1);
+        arr.forEach(doc => {
+          const key = `${doc.firstName} ${doc.lastName} (${doc.year})`;
+          out[key] = (out[key] || 0) + 1;
+        });
       }
     });
     return out;
@@ -163,14 +168,16 @@ export default function CalendarWithShift() {
                     }}>
                     <Text style={{ fontWeight: 'bold', color: isToday ? '#1D4ED8' : '#000' }}> {date.day} </Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 2, marginTop: 4 }}>
-                      {names.map(n => (
-                        <View key={n} style={{
-                          backgroundColor: pastel[doctors.indexOf(n) % pastel.length],
-                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10
-                        }}>
-                          <Text style={{ fontSize: 10 }}>{n}</Text>
-                        </View>
-                      ))}
+                      {names.map((doc, i) => {
+                        if (!doc?.firstName || !doc?.lastName || !doc?.year) return null;
+                        return (
+                          <View key={`${doc.firstName}-${doc.lastName}-${doc.year}`}>
+                            <Text style={{ fontSize: 10 }}>
+                              {doc.firstName} {doc.lastName}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                   </TouchableOpacity>
                 );
@@ -187,38 +194,112 @@ export default function CalendarWithShift() {
               </TouchableOpacity>
             </View>
 
-            {Object.entries(countByDoc()).map(([n, c]) => (
-              <View key={n} style={styles.row}>
-                <View style={[styles.pill, { backgroundColor: pastel[doctors.indexOf(n) % pastel.length] }]}>
-                  <Text style={{ fontSize: 13 }}>{n}</Text>
-                </View>
-                <Text style={{ marginLeft: 8, fontSize: 13 }}>{c} วัน</Text>
+            {/* function สำหรับการนับเวรของหมอแต่ละคน */}
+            {Object.entries(countByDoc()).length === 0 ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <Text style={{ textAlign: 'left', fontSize: 14, color: '#555', fontStyle: "italic"}}>
+                  📋 ยังไม่มีหมอที่ได้รับเวรในเดือนนี้
+                </Text>
+                <Text style={{ textAlign: 'left', fontSize: 14, marginTop: 6, color: '#555' }}>
+                  👉 คลิกวันที่ในปฏิทิน เพิ่มหมอเวรได้เลย
+                </Text>
               </View>
-            ))}
-          </View>
-        </View>
+            ) : (
+              Object.entries(countByDoc()).map(([name, count], i) => (
+                <View key={name} style={styles.row}>
+                  <View style={[styles.pill, { backgroundColor: pastel[i % pastel.length] }]}>
+                    <Text style={{ fontSize: 13 }}>{name}</Text>
+                  </View>
+                  <Text style={{ marginLeft: 8, fontSize: 13 }}>{count} วัน</Text>
+                </View>
+              ))
+            )}
+         </View>
+         {/* End view of summary */}
 
+        </View>
         {/* Modal เลือกหมอเวร */}
         <Modal visible={visible} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <Text style={styles.modalTitle}>เลือกหมอเวร</Text>
-              {doctors.map(n => (
-                <TouchableOpacity key={n} onPress={() =>
-                  setSelDocs(p => p.includes(n) ? p.filter(x => x !== n) : [...p, n])
-                }>
-                  <Text style={{
-                    padding: 8, marginVertical: 4, borderRadius: 6,
-                    backgroundColor: selDocs.includes(n) ? '#d0f0c0' : '#eee'
-                  }}>
-                    {selDocs.includes(n) ? '✅ ' : ''}{n}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              <Button title="บันทึก" onPress={saveDocs} />
-              <Button title="ยกเลิก" onPress={() => setVisible(false)} color="gray" />
+          <TouchableWithoutFeedback onPress={() => setVisible(false)}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback onPress={() => {}}>
+                <View style={styles.modalBox}>
+                  <Text style={styles.modalTitle}>เลือกหมอเวร 🩺</Text>
+
+                  {doctors.map((doc, i) => {
+                    const key = `${doc.firstName}-${doc.lastName}-${doc.year}`;
+                    const isSelected = selDocs.some(
+                      d => d.firstName === doc.firstName &&
+                          d.lastName === doc.lastName &&
+                          d.year === doc.year
+                    );
+                    const bg = pastel[i % pastel.length];
+
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        onPress={() => {
+                          const updated = isSelected
+                            ? selDocs.filter(d =>
+                                !(d.firstName === doc.firstName &&
+                                  d.lastName === doc.lastName &&
+                                  d.year === doc.year)
+                              )
+                            : [...selDocs, doc];
+                          setSelDocs(updated);
+                          if (selDate) {
+                            setShifts(prev => ({ ...prev, [selDate]: updated }));
+                          }
+                        }}
+                      >
+                        <View style={{
+                          padding: 8,
+                          marginVertical: 4,
+                          borderRadius: 6,
+                          backgroundColor: isSelected ? bg : '#eee',
+                          flexDirection: 'row',
+                          alignItems: 'center'
+                        }}>
+                          <View style={{
+                            width: 10,
+                            height: 10,
+                            backgroundColor: bg,
+                            borderRadius: 5,
+                            marginRight: 6,
+                            borderWidth: 1,
+                            borderColor: '#999'
+                          }} />
+                          <Text>
+                            {isSelected ? '✅ ' : ''}
+                            {doc.firstName} {doc.lastName} ({doc.year})
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  <View style={{ marginTop: 6 }}>
+                    <TouchableOpacity
+                      style={[styles.btnClear, { alignSelf: 'flex-start', backgroundColor: '#FFDDDD', marginTop: 12 }]}
+                      onPress={() => {
+                        if (selDate) {
+                          setSelDocs([]);
+                          setShifts(prev => {
+                            const copy = { ...prev };
+                            delete copy[selDate];
+                            return copy;
+                          });
+                        }
+                        setVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.btnText, { color: '#F59090', fontSize: 12}]}>🧹 เคลียร์เวรวันนี้</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
             </View>
-          </View>
+          </TouchableWithoutFeedback>
         </Modal>
 
         {/* Modal เลือกเดือน */}
@@ -257,7 +338,20 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
 
-  modalOverlay: { flex: 1, justifyContent: 'center', backgroundColor: '#00000088', paddingHorizontal: 20 },
-  modalBox: { backgroundColor: 'white', padding: 22, borderRadius: 10 },
+  modalOverlay: {
+  flex: 1,
+  justifyContent: 'center',
+  backgroundColor: '#00000088',
+  paddingHorizontal: 20,
+},
+  
+modalBox: {
+  backgroundColor: 'white',
+  padding: 22,
+  borderRadius: 10,
+  maxWidth: 400,
+  width: '100%',
+  alignSelf: 'center',
+},
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
 });

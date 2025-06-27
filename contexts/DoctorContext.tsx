@@ -1,13 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type ShiftMap = { [date: string]: string[] };
+export type Doctor = {
+  firstName: string;
+  lastName: string;
+  year: string;
+  icon?: string; 
+};
+
+type ShiftMap = { [date: string]: Doctor[] };
 
 type DoctorContextType = {
-  doctors: string[];
-  addDoctor: (n: string) => void;
-  removeDoctor: (n: string) => void;
+  doctors: Doctor[];
+  addDoctor: (n: Doctor) => void;
+  removeDoctor: (n: Doctor) => void;
   clearAllDoctors: () => void;
+  updateDoctor: (index: number, newDoctor: Doctor) => void; 
   shifts: ShiftMap;
   setShifts: React.Dispatch<React.SetStateAction<ShiftMap>>;
 };
@@ -15,19 +23,19 @@ type DoctorContextType = {
 const Ctx = createContext<DoctorContextType | undefined>(undefined);
 
 export const DoctorProvider = ({ children }: { children: React.ReactNode }) => {
-  const [doctors, setDoctors] = useState<string[]>([]);
-  const [shifts , setShifts ] = useState<ShiftMap>({});
-  const [ready  , setReady  ] = useState(false);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [shifts, setShifts] = useState<ShiftMap>({});
+  const [ready, setReady] = useState(false);
 
-  /* ── LOAD once ── */
+  /* ── LOAD ── */
   useEffect(() => {
     (async () => {
       try {
-        const [[,d], [,s]] = await AsyncStorage.multiGet([
+        const [[, d], [, s]] = await AsyncStorage.multiGet([
           'docduty-doctors',
           'docduty-shifts',
         ]);
-        if (d) setDoctors(JSON.parse(d));
+        if (d) setDoctors(JSON.parse(d) as Doctor[]);
         if (s) setShifts(JSON.parse(s));
       } finally {
         setReady(true);
@@ -35,37 +43,77 @@ export const DoctorProvider = ({ children }: { children: React.ReactNode }) => {
     })();
   }, []);
 
-  /* ── SAVE when data changes ── */
+  /* ── SAVE ── */
   useEffect(() => {
     if (!ready) return;
     AsyncStorage.multiSet([
       ['docduty-doctors', JSON.stringify(doctors)],
-      ['docduty-shifts' , JSON.stringify(shifts )],
-    ]).catch((e)=>console.error('save error',e));
+      ['docduty-shifts', JSON.stringify(shifts)],
+    ]).catch((e) => console.error('save error', e));
   }, [doctors, shifts, ready]);
 
-  /* helpers */
-  const addDoctor = (n: string) =>
-    setDoctors((p) => (p.includes(n) ? p : [...p, n.trim()]));
+  /* ── Helpers ── */
+  const sameDoctor = (a: Doctor, b: Doctor) =>
+    a.firstName === b.firstName &&
+    a.lastName === b.lastName &&
+    a.year === b.year;
 
-  const removeDoctor = (n: string) => {
-    setDoctors((p) => p.filter((x) => x !== n));
-    setShifts((p) => {
+  const addDoctor = (n: Doctor) =>
+  setDoctors((prev) =>
+    prev.find(
+      (d) =>
+        d.firstName === n.firstName &&
+        d.lastName === n.lastName &&
+        d.year === n.year
+    )
+      ? prev
+      : [...prev, n]
+  );
+
+  const updateDoctor = (index: number, newDoctor: Doctor) => {
+    setDoctors((prev) => {
+      const updated = [...prev];
+      updated[index] = newDoctor;
+      return updated;
+    });
+  };
+
+
+  const removeDoctor = (n: Doctor) => {
+  setDoctors((prev) =>
+    prev.filter(
+      (d) =>
+        d.firstName !== n.firstName ||
+        d.lastName !== n.lastName ||
+        d.year !== n.year
+    )
+  );
+    setShifts((prev) => {
       const out: ShiftMap = {};
-      Object.entries(p).forEach(([d, list]) => {
-        const left = list.filter((x) => x !== n);
-        if (left.length) out[d] = left;
+      Object.entries(prev).forEach(([date, list]) => {
+        const filtered = list.filter(
+          (d) =>
+            d.firstName !== n.firstName ||
+            d.lastName !== n.lastName ||
+            d.year !== n.year
+        );
+        if (filtered.length > 0) out[date] = filtered;
       });
       return out;
     });
   };
 
-  const clearAllDoctors = () => { setDoctors([]); setShifts({}); };
+  const clearAllDoctors = () => {
+    setDoctors([]);
+    setShifts({});
+  };
 
-  if (!ready) return null;        // รอโหลดก่อน
+  if (!ready) return null;
 
   return (
-    <Ctx.Provider value={{ doctors, addDoctor, removeDoctor, clearAllDoctors, shifts, setShifts }}>
+    <Ctx.Provider
+      value={{ doctors, addDoctor, removeDoctor, clearAllDoctors, updateDoctor, shifts, setShifts }}
+    >
       {children}
     </Ctx.Provider>
   );

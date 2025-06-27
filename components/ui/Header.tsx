@@ -4,7 +4,7 @@ export default function Header() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.title}>DocDuty - จัดตารางเวร</Text>
+        <Text style={styles.title}>DocDuty - หมอเวร</Text>
       </View>
     </SafeAreaView>
   );
