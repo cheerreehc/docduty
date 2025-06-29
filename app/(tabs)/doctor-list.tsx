@@ -18,6 +18,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+
+
 export default function DoctorListScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -26,6 +28,7 @@ export default function DoctorListScreen() {
   const { doctors, addDoctor, updateDoctor, removeDoctor } = useDoctor();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [icon, setIcon] = useState('👨🏻‍⚕️');
+  const [color, setColor] = useState('#FEE2E2');
 
   const handleAdd = () => {
     const trimmed = {
@@ -38,7 +41,14 @@ export default function DoctorListScreen() {
     if (!trimmed.firstName || !trimmed.lastName || !trimmed.year) return;
 
     if (editIndex !== null) {
-      updateDoctor(editIndex, trimmed);
+      const idToEdit = doctors[editIndex].id;
+      updateDoctor(idToEdit, {
+        firstName: trimmed.firstName,
+        lastName: trimmed.lastName,
+        year: trimmed.year,
+        icon: trimmed.icon,
+        color,
+      });
       setEditIndex(null); // รีเซตโหมดแก้ไข
     } else {
       const exists = doctors.some(
@@ -49,7 +59,13 @@ export default function DoctorListScreen() {
       );
       if (exists) return;
 
-      addDoctor(trimmed);
+      addDoctor({
+        firstName: trimmed.firstName,
+        lastName: trimmed.lastName,
+        year: trimmed.year,
+        icon: trimmed.icon,
+        color,
+      });
     }
 
     setFirstName('');
@@ -57,6 +73,7 @@ export default function DoctorListScreen() {
     setYear('');
     setModalVisible(false); // ปิด modal หลังเพิ่ม/แก้ไข
   };
+
 
 
   const { width } = useWindowDimensions();
@@ -145,6 +162,27 @@ export default function DoctorListScreen() {
                         />
                       </View>
 
+                      <View style={styles.formGroup}>
+                      <Text style={styles.label}>เลือกสีประจำตัว</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {['#FEE2E2','#E0F2FE','#DCFCE7','#EDE9FE','#FFF7CD'].map((c) => (
+                          <TouchableOpacity
+                            key={c}
+                            onPress={() => setColor(c)}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 14,
+                              backgroundColor: c,
+                              borderWidth: color === c ? 2 : 1,
+                              borderColor: color === c ? '#000' : '#ccc',
+                            }}
+                          />
+                        ))}
+                      </View>
+                    </View>
+
+
                       <View style={styles.modalButtonRow}>
                         <Button title="ยกเลิก" color="#888" onPress={() => {
                           setModalVisible(false);
@@ -172,7 +210,7 @@ export default function DoctorListScreen() {
                 <Text style={{ fontFamily: 'PKRound', fontSize: 24, textAlign: 'center' }}>รายชื่อหมอ</Text>
                 <TouchableOpacity
                   style={styles.addButton}
-                  onPress={() => setModalVisible(true)}
+                  onPress={() => setModalVisible(true) }
                 >
                   <Text style={{ fontFamily: 'PKRound', fontSize: 14, textAlign: 'center' }}>➕ เพิ่มหมอ</Text>
                 </TouchableOpacity>
@@ -181,33 +219,44 @@ export default function DoctorListScreen() {
           }
           contentContainerStyle={{ alignItems: 'center', paddingBottom: 40, paddingTop: 20 }}
           data={doctors}
-          keyExtractor={(item, index) =>
-            `${item.firstName}-${item.lastName}-${item.year}-${index}`
-          }
+          keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
-            <View style={[styles.card, { width: contentWidth }]}>
-              <Text style={styles.doctorName}>
-                {item.icon || '👨🏻‍⚕️'} {item.firstName} {item.lastName} ({item.year})
-              </Text>
-              <Text style={styles.cardSubtitle}>ชั้นปี: {item.year}</Text>
+            <View style={[styles.card, { width: contentWidth, flexDirection: 'row', padding: 0 }]}>
+              {/* แถบสีด้านซ้าย */}
+              <View style={{
+                width: 8,
+                backgroundColor: item.color || '#ccc',
+                borderTopLeftRadius: 12,
+                borderBottomLeftRadius: 12,
+              }} />
+              <View style={{ flex: 1, padding: 16 }}>
+                <View style={{ backgroundColor: item.color || '#ccc', width: 6, borderRadius: 4, marginRight: 12 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.doctorName}>
+                      {item.icon || '👨🏻‍⚕️'} {item.firstName} {item.lastName} ({item.year})
+                    </Text>
+                    <Text style={styles.cardSubtitle}>ชั้นปี: {item.year}</Text>
 
-              <View style={styles.cardButtons}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setFirstName(item.firstName);
-                    setLastName(item.lastName);
-                    setYear(item.year);
-                    setEditIndex(index);
-                    setModalVisible(true);
-                  }}
-                >
-                  <Text style={styles.editText}>แก้ไข</Text>
-                </TouchableOpacity>
+                    <View style={styles.cardButtons}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setFirstName(item.firstName);
+                          setLastName(item.lastName);
+                          setYear(item.year);
+                          setColor(item.color || '#FEE2E2');
+                          setEditIndex(index);
+                          setModalVisible(true);
+                        }}
+                      >
+                        <Text style={styles.editText}>แก้ไข</Text>
+                      </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => removeDoctor(item)}>
-                  <Text style={styles.deleteText}>ลบ</Text>
-                </TouchableOpacity>
-              </View>
+                      <TouchableOpacity onPress={() => removeDoctor(item)}>
+                        <Text style={styles.deleteText}>ลบ</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
             </View>
           )}
 
@@ -326,7 +375,6 @@ modalButtonRow: {
 card: {
   width: '100%',
   backgroundColor: '#f9f9f9',
-  padding: 16,
   borderRadius: 12,
   marginBottom: 12,
   shadowColor: '#000',
@@ -334,6 +382,7 @@ card: {
   shadowOpacity: 0.1,
   shadowRadius: 3,
   elevation: 2,
+  overflow: 'hidden',
 },
 cardTitle: {
   fontSize: 16,

@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { DoctorProvider } from '../contexts/DoctorContext';
+import { DutyTypeProvider } from '../contexts/DutyTypeContext';
 
 
 export default function RootLayout() {
@@ -21,14 +22,20 @@ export default function RootLayout() {
   
 
   return (
+    <DutyTypeProvider>
     <DoctorProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+    
+      
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      
+    
     </DoctorProvider>
+    </DutyTypeProvider>
   );
 }

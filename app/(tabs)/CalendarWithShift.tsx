@@ -1,9 +1,10 @@
 import { Header } from '@/components/ui/Header';
 import { Doctor, useDoctor } from '@/contexts/DoctorContext';
+import { useDutyType } from '@/contexts/DutyTypeContext';
 import { FontAwesome5 } from '@expo/vector-icons'; // เพิ่มตรง import ด้วย
 import React, { useState } from 'react';
 import {
-  Button, Modal,
+  Modal,
   ScrollView, StyleSheet, Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
@@ -14,17 +15,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const pastel = ['#FEE2E2','#E0F2FE','#DCFCE7','#EDE9FE','#FFF7CD'];
 
+
 export default function CalendarWithShift() {
-  const { shifts, setShifts, doctors } = useDoctor(); // doctors: Doctor[]
+  
+  const [selectedDutyType, setSelectedDutyType] = useState<string>(''); 
+  const getDoctorsByIds = (ids: string[]): Doctor[] => {
+  return ids.map(id => doctors.find(doc => doc.id === id)).filter(Boolean) as Doctor[];
+};
 
   const [selDate, setSelDate] = useState<string|null>(null);
   const [selDocs, setSelDocs] = useState<Doctor[]>([]);
   const [visible, setVisible] = useState(false);
+  const [openAccordions, setOpenAccordions] = useState<number[]>([]);
+
 
   const { width } = useWindowDimensions();
   const isPad = width >= 768;
   const cellW = isPad ? 80 : 46;
   const cellH = isPad ? 82 : 58;
+
+  const { dutyTypes } = useDutyType();
+  console.log('✅ dutyTypes loaded:', dutyTypes);
+
+  const { doctors, shifts, setShifts } = useDoctor();
   
 
   // สำหรับการเลือกเดือน 
@@ -59,38 +72,68 @@ export default function CalendarWithShift() {
   // END OF กระโดดข้ามมาที่เดือนปัจจุบัน
 
   const onDayPress = (day: DateData) => {
+    if (dutyTypes.length === 0) {
+      console.warn('⚠️ ไม่มีประเภทเวร (dutyTypes) ให้เลือก'); 
+      return;
+    }
+    
     setSelDate(day.dateString);
-    setSelDocs(shifts[day.dateString] || []);
+    setSelectedDutyType(dutyTypes[0] || '');
+    const ids = shifts[day.dateString]?.[dutyTypes[0]] || [];
+    setSelDocs(getDoctorsByIds(ids));
+    setOpenAccordions([]);
     setVisible(true);
   };
 
-  const saveDocs = () => {
-    if (selDate) setShifts(p => ({ ...p, [selDate]: selDocs }));
-    setVisible(false);
+
+    const saveDocs = () => {
+      if (selDate && selectedDutyType) {
+        setShifts(p => ({
+          ...p,
+          [selDate]: {
+            ...(p[selDate] || {}),
+            [selectedDutyType]: selDocs.map(d => d.id), // ✅
+          }
+        }));
+      setVisible(false);
+    }
   };
 
-  const clearCurrentMonth = () => {
-    console.log('🧹 clear pressed');
-    setShifts(p => {
-      const out: typeof p = {};
-      Object.entries(p).forEach(([d, list]) => {
-        if (!d.startsWith(viewMonth)) out[d] = list;
-      });
-      return out;
-    });
-  };
 
-  const countByDoc = () => {
-    const out: Record<string, number> = {};
-    Object.entries(shifts).forEach(([date, arr]) => {
+  const countByDoc = (): Record<string, { count: number; doctor: Doctor }> => {
+    const out: Record<string, { count: number; doctor: Doctor }> = {};
+
+    Object.entries(shifts).forEach(([date, dutyMap]) => {
       if (date.startsWith(viewMonth)) {
-        arr.forEach(doc => {
-          const key = `${doc.firstName} ${doc.lastName} (${doc.year})`;
-          out[key] = (out[key] || 0) + 1;
+        Object.values(dutyMap).forEach((idArr) => {
+          const docs = getDoctorsByIds(idArr);
+          docs.forEach(doc => {
+            const key = `${doc.firstName} ${doc.lastName} (${doc.year})`;
+            if (!out[key]) {
+              out[key] = { count: 1, doctor: doc };
+            } else {
+              out[key].count += 1;
+            }
+          });
         });
       }
     });
+
     return out;
+  };
+
+
+
+  const clearCurrentMonth = () => {
+    setShifts(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(date => {
+        if (date.startsWith(viewMonth)) {
+          delete updated[date];
+        }
+      });
+      return updated;
+    });
   };
 
   const insets = useSafeAreaInsets();
@@ -172,36 +215,51 @@ export default function CalendarWithShift() {
               theme={{ textDayFontSize: isPad ? 18 : 14 }}
               dayComponent={({ date }) => {
                 if (!date) return null;
-                const names = shifts[date.dateString] || [];
-
                 const todayStr = new Date().toISOString().split('T')[0];
                 const isToday = date.dateString === todayStr;
+                const allShifts = shifts[date.dateString] || {};
 
                 return (
                   <TouchableOpacity
                     onPress={() => onDayPress(date)}
                     style={{
-                      width: cellW, height: cellH, margin: 2, alignItems: 'center',
-                      justifyContent: 'center', borderRadius: 8, borderWidth: 0.8,
-                      borderColor: isToday ? '#26C6DA' : '#ddd', // 🔵 เส้นกรอบฟ้าถ้าวันนี้
-                      backgroundColor: isToday ? '#EEFEFF' : 'white', // 🔵 พื้นหลังฟ้าจาง
-                    }}>
-                    <Text style={{ fontWeight: 'bold', color: isToday ? '#26C6DA' : '#000' }}> {date.day} </Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 2, marginTop: 4 }}>
-                      {names.map((doc, i) => {
-                        if (!doc?.firstName || !doc?.lastName || !doc?.year) return null;
+                      width: cellW,
+                      height: cellH,
+                      margin: 2,
+                      borderRadius: 8,
+                      borderWidth: 0.8,
+                      borderColor: isToday ? '#26C6DA' : '#ddd',
+                      backgroundColor: isToday ? '#EEFEFF' : 'white',
+                      padding: 2,
+                    }}
+                  >
+                    <Text style={{ fontWeight: 'bold', textAlign: 'center', color: isToday ? '#26C6DA' : '#000' }}>
+                      {date.day}
+                    </Text>
+
+                    {/* ✅ รายชื่อแยกตามประเภทเวร */}
+                    <ScrollView style={{ marginTop: 2, maxHeight: cellH - 28 }}>
+                      {Object.entries(allShifts).map(([type, idArr], i) => {
+                        const docs = getDoctorsByIds(idArr);
+                        if (docs.length === 0) return null;
                         return (
-                          <View key={`${doc.firstName}-${doc.lastName}-${doc.year}`}>
-                            <Text style={{ fontSize: 10 }}>
-                              {doc.firstName} {doc.lastName}
+                          <View key={type} style={{ marginBottom: 2 }}>
+                            <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#555' }}>
+                              {type}
                             </Text>
+                            {docs.map(doc => (
+                              <Text key={doc.id} style={{ fontSize: 9 }}>
+                                - {doc.firstName}
+                              </Text>
+                            ))}
                           </View>
                         );
                       })}
-                    </View>
+                    </ScrollView>
                   </TouchableOpacity>
                 );
               }}
+
             />
           </View>
 
@@ -227,14 +285,14 @@ export default function CalendarWithShift() {
                 </Text>
               </View>
             ) : (
-              Object.entries(countByDoc()).map(([name, count], i) => (
-                <View key={name} style={styles.row}>
-                  <View style={[styles.pill, { backgroundColor: pastel[i % pastel.length] }]}>
+              Object.entries(countByDoc()).map(([name, { count, doctor }]) => (
+              <View key={name} style={styles.row}>
+                  <View style={[styles.pill, { backgroundColor: doctor.color || '#EEE' }]}>
                     <Text style={{ fontSize: 13 }}>{name}</Text>
                   </View>
                   <Text style={{ marginLeft: 8, fontSize: 13 }}>{count} วัน</Text>
                 </View>
-              ))
+              ))  
             )}
          </View>
          {/* End view of summary */}
@@ -242,114 +300,136 @@ export default function CalendarWithShift() {
         </View>
         {/* Modal เลือกหมอเวร */}
         <Modal visible={visible} transparent animationType="fade">
-          <TouchableWithoutFeedback onPress={() => setVisible(false)}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback onPress={() => {}}>
-                <View style={styles.modalBox}>
-                  <Text style={styles.modalTitle}>เลือกหมอเวร 🩺</Text>
+  <TouchableWithoutFeedback onPress={() => setVisible(false)}>
+    <View style={styles.modalOverlay}>
+      <TouchableWithoutFeedback onPress={() => {}}>
+        <View style={styles.modalBox}>
+          <Text style={styles.modalTitle}>เลือกหมอเวร 🩺</Text>
 
-                  {doctors.map((doc, i) => {
-                    const key = `${doc.firstName}-${doc.lastName}-${doc.year}`;
-                    const isSelected = selDocs.some(
-                      d => d.firstName === doc.firstName &&
-                          d.lastName === doc.lastName &&
-                          d.year === doc.year
-                    );
-                    const bg = pastel[i % pastel.length];
+          {!selDate ? null : (
+  <View style={{ flexDirection: 'column', gap: 10 }}>
+    {dutyTypes.map((type, index) => {
+      const isOpen = openAccordions.includes(index);
+      const selectedIds = shifts[selDate]?.[type] || [];
 
-                    return (
-                      <TouchableOpacity
-                        key={key}
-                        onPress={() => {
-                          const updated = isSelected
-                            ? selDocs.filter(d =>
-                                !(d.firstName === doc.firstName &&
-                                  d.lastName === doc.lastName &&
-                                  d.year === doc.year)
-                              )
-                            : [...selDocs, doc];
-                          setSelDocs(updated);
-                          if (selDate) {
-                            setShifts(prev => ({ ...prev, [selDate]: updated }));
-                          }
-                        }}
-                      >
-                        <View style={{
-                          padding: 8,
-                          marginVertical: 4,
-                          borderRadius: 6,
-                          backgroundColor: isSelected ? bg : '#eee',
-                          flexDirection: 'row',
-                          alignItems: 'center'
-                        }}>
-                          <View style={{
-                            width: 10,
-                            height: 10,
-                            backgroundColor: bg,
-                            borderRadius: 5,
-                            marginRight: 6,
-                            borderWidth: 1,
-                            borderColor: '#999'
-                          }} />
-                          <Text>
-                            {isSelected ? '✅ ' : ''}
-                            {doc.firstName} {doc.lastName} ({doc.year})
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
+      // 🔒 สร้าง Set ของหมอที่เลือกไว้ในเวรอื่น
+      const selectedInOtherTypes = new Set<string>();
+      dutyTypes.forEach(t => {
+        if (t !== type) {
+          (shifts[selDate]?.[t] || []).forEach(id => selectedInOtherTypes.add(id));
+        }
+      });
 
-                  <View style={{ marginTop: 6 }}>
-                    <TouchableOpacity
-                      style={[styles.btnClear, { alignSelf: 'flex-start', backgroundColor: '#FFDDDD', marginTop: 12 }]}
-                      onPress={() => {
-                        if (selDate) {
-                          setSelDocs([]);
-                          setShifts(prev => {
-                            const copy = { ...prev };
-                            delete copy[selDate];
-                            return copy;
-                          });
-                        }
-                        setVisible(false);
-                      }}
-                    >
-                      <Text style={[styles.btnText, { color: '#F59090', fontSize: 12}]}>🧹 เคลียร์เวรวันนี้</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableWithoutFeedback>
+      // 🧾 ชื่อหมอที่เลือกไว้ในประเภทนี้
+      const selectedNames = getDoctorsByIds(selectedIds).map(doc => doc.firstName).join(', ');
+
+      return (
+        <View key={type}>
+          {/* Accordion Header */}
+          <TouchableOpacity
+            onPress={() => {
+              setOpenAccordions(prev =>
+                prev.includes(index)
+                  ? prev.filter(i => i !== index)
+                  : [...prev, index]
+              );
+            }}
+            style={{
+              backgroundColor: '#26C6DA',
+              padding: 10,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+              {isOpen ? '▼' : '▶'} {type}
+              {selectedNames ? ` : ${selectedNames}` : ''}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Accordion Content */}
+          {isOpen && (
+            <View style={{ marginTop: 6 }}>
+              {doctors.map((doc, i) => {
+                const isSelected = selectedIds.includes(doc.id);
+                const isLocked = selectedInOtherTypes.has(doc.id);
+                const bg = doc.color || pastel[i % pastel.length];
+
+                return (
+                  <TouchableOpacity
+                    key={doc.id}
+                    disabled={isLocked}
+                    onPress={() => {
+                      if (isLocked) return;
+                      const current = shifts[selDate]?.[type] || [];
+                      const updated = isSelected
+                        ? current.filter(id => id !== doc.id)
+                        : [...current, doc.id];
+                      setShifts(prev => ({
+                        ...prev,
+                        [selDate]: {
+                          ...(prev[selDate] || {}),
+                          [type]: updated,
+                        },
+                      }));
+                    }}
+                    style={{
+                      backgroundColor: isSelected
+                        ? bg
+                        : isLocked
+                        ? '#ddd'
+                        : '#eee',
+                      padding: 10,
+                      borderRadius: 8,
+                      marginVertical: 4,
+                      opacity: isLocked ? 0.6 : 1,
+                    }}
+                  >
+                    <Text style={{ color: isLocked ? '#666' : '#000' }}>
+                      {isSelected ? '✅ ' : ''}
+                      {doc.firstName} {doc.lastName} ({doc.year})
+                      {isLocked ? ' – ถูกเลือกในเวรอื่นแล้ว' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          </TouchableWithoutFeedback>
-        </Modal>
+          )}
+        </View>
+      );
+    })}
+  </View>
+)}
 
-        {/* Modal เลือกเดือน */}
-        <Modal visible={monthModal} transparent animationType="fade">
-          <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#00000066', padding: 20 }}>
-            <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
-                เลือกเดือน
-              </Text>
-              {thaiMonths.map((m, i) => (
-                <TouchableOpacity key={i} onPress={() => selectMonth(i)}>
-                  <Text style={{
-                    padding: 10, textAlign: 'center', fontSize: 16,
-                    backgroundColor: i === parseInt(selectedMonth.split('-')[1]) - 1 ? '#cce5ff' : undefined
-                  }}>
-                    {m}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              <Button title="ปิด" onPress={() => setMonthModal(false)} color="gray" />
-            </View>
-          </View>
-        </Modal>
+
+
+
+          <TouchableOpacity
+            style={[styles.btnClear, { alignSelf: 'flex-start', backgroundColor: '#FFDDDD', marginTop: 16 }]}
+            onPress={() => {
+              if (selDate) {
+                setShifts(prev => {
+                  const copy = { ...prev };
+                  delete copy[selDate];
+                  return copy;
+                });
+              }
+              setVisible(false);
+            }}
+          >
+            <Text style={[styles.btnText, { color: '#F59090', fontSize: 12 }]}>🧹 เคลียร์เวรทั้งหมดวันนี้</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableWithoutFeedback>
+    </View>
+  </TouchableWithoutFeedback>
+</Modal>
+
 
       </ScrollView>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 },

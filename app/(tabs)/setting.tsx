@@ -1,25 +1,26 @@
 import { Header } from '@/components/ui/Header';
+import { useDutyType } from '@/contexts/DutyTypeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-    Button,
-    FlatList,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
-    useWindowDimensions,
+  Button,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function setting() {
-  const [dutyTypes, setDutyTypes] = useState<string[]>([]);
+  const {dutyTypes, addDutyType, removeDutyType, updateDutyType } = useDutyType();
   const [newDuty, setNewDuty] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -28,14 +29,8 @@ export default function setting() {
   const { width } = useWindowDimensions();
   const contentWidth = Math.min(width * 0.9, 600);
 
-  useEffect(() => {
-    AsyncStorage.getItem('dutyTypes').then(json => {
-      if (json) setDutyTypes(JSON.parse(json));
-    });
-  }, []);
-
   const saveDutyTypes = async (types: string[]) => {
-    await AsyncStorage.setItem('dutyTypes', JSON.stringify(types));
+    await AsyncStorage.setItem('docduty-dutyTypes', JSON.stringify(types));
   };
 
   const handleAdd = () => {
@@ -43,20 +38,16 @@ export default function setting() {
     if (!trimmed) return;
 
     if (editIndex !== null) {
-      const updated = [...dutyTypes];
-      updated[editIndex] = trimmed;
-      setDutyTypes(updated);
-      saveDutyTypes(updated);
+      updateDutyType(editIndex, trimmed);
       setEditIndex(null);
-    } else if (!dutyTypes.includes(trimmed)) {
-      const updated = [...dutyTypes, trimmed];
-      setDutyTypes(updated);
-      saveDutyTypes(updated);
+    } else {
+      addDutyType(trimmed);
     }
 
     setNewDuty('');
     setModalVisible(false);
   };
+
 
   const handleEdit = (index: number) => {
     setNewDuty(dutyTypes[index]);
@@ -65,10 +56,7 @@ export default function setting() {
   };
 
   const handleDelete = (index: number) => {
-    const updated = [...dutyTypes];
-    updated.splice(index, 1);
-    setDutyTypes(updated);
-    saveDutyTypes(updated);
+    removeDutyType(index); // ✅ เรียกผ่าน context
   };
 
   return (
