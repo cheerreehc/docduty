@@ -1,15 +1,5 @@
-import { Header } from '@/components/ui/Header';
-import { SafeAreaView } from 'react-native';
-import CalendarWithShift from '../../components/CalendarWithShift';
+import { Redirect } from 'expo-router';
 
-
-
-export default function Page() {
-
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-      <Header showGreeting={false} showToday={false} compact text = "ตารางเวร" logoSize={{ width: 120, height: 50 } }/>  
-      <CalendarWithShift />
-    </SafeAreaView>
-  );
+export default function Index() {
+  return <Redirect href="/(tabs)/home" />;
 }

@@ -16,6 +16,7 @@ import {
   View,
   useWindowDimensions
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DoctorListScreen() {
   const [firstName, setFirstName] = useState('');
@@ -62,10 +63,20 @@ export default function DoctorListScreen() {
   const isPad = width >= 768;
   const contentWidth = Math.min(width * 0.9, 600); // 90% max 600px
 
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <Header showGreeting={false} showToday={false} compact text = "รายชื่อหมอ" logoSize={{ width: 120, height: 50 } }/>  
+      {/* Safe area เฉพาะด้านบน */}
+            <View
+              style={{
+                height: insets.top + 5, 
+                backgroundColor: '#008191',
+                overflow: 'hidden',
+                zIndex: 1,
+              }}
+            />
+      <Header showGreeting={false} showToday={false} compact text = "รายชื่อหมอ" logoSize={{ width: 80, height: 30 } }/>  
           <Modal visible={modalVisible} animationType="fade" transparent>
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -375,6 +386,6 @@ emojiButton: {
 },
 emojiSelected: {
   backgroundColor: '#cce5ff',
-},
+}
 
 });

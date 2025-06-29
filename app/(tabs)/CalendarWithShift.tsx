@@ -1,14 +1,16 @@
-
+import { Header } from '@/components/ui/Header';
 import { Doctor, useDoctor } from '@/contexts/DoctorContext';
 import { FontAwesome5 } from '@expo/vector-icons'; // เพิ่มตรง import ด้วย
 import React, { useState } from 'react';
 import {
-  Button, Modal, SafeAreaView, ScrollView, StyleSheet, Text,
+  Button, Modal,
+  ScrollView, StyleSheet, Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  useWindowDimensions, View,
+  useWindowDimensions, View
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const pastel = ['#FEE2E2','#E0F2FE','#DCFCE7','#EDE9FE','#FFF7CD'];
 
@@ -23,6 +25,7 @@ export default function CalendarWithShift() {
   const isPad = width >= 768;
   const cellW = isPad ? 80 : 46;
   const cellH = isPad ? 82 : 58;
+  
 
   // สำหรับการเลือกเดือน 
   const now = new Date();
@@ -90,10 +93,25 @@ export default function CalendarWithShift() {
     return out;
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      
-      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
+    // <SafeAreaView style={{ flex: 1, backgroundColor: '#008191', borderBottomLeftRadius: 80,
+    //       borderBottomRightRadius: 90,}}>
+    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+
+      {/* Safe area เฉพาะด้านบน */}
+      <View
+        style={{
+          height: insets.top + 5, 
+          backgroundColor: '#008191',
+          overflow: 'hidden',
+          zIndex: 1,
+        }}
+      />
+
+      <Header showGreeting={false} showToday={false} compact text = "ตารางเวร" logoSize={{ width: 80, height: 30 } }/>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, alignItems: 'center' ,backgroundColor: '#fafafa' }} keyboardShouldPersistTaps="handled">
         {/* Month Selector + ปุ่มเดือนปัจจุบัน */}
         {/* <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1000, marginBottom: 12 }}>
           <TouchableOpacity onPress={goToCurrentMonth}>
@@ -103,10 +121,11 @@ export default function CalendarWithShift() {
 
         
         <View style={{ flexDirection: isPad ? 'row' : 'column', gap: isPad ? 40 : 20, width: '100%', maxWidth: 1000 }}>
+          
           {/* Calendar */}
           <View style={{ flex: isPad ? 3 : undefined }}>
             <Calendar
-            
+
                 hideExtraDays={true} // ซ่อนวันที่อยู่นอกเดือน
                 // สำหรับเลือกเดือนผ่าน Modal
                 key={viewMonth}
@@ -148,7 +167,8 @@ export default function CalendarWithShift() {
                     </View>
                   )}// END OF Custom ปุ่ม < > ใน libç
 
-              style={{ width: isPad ? '100%' : width - 32 }}
+              // style={{ width: isPad ? '100%' : width - 32 }}
+              
               theme={{ textDayFontSize: isPad ? 18 : 14 }}
               dayComponent={({ date }) => {
                 if (!date) return null;
@@ -327,7 +347,7 @@ export default function CalendarWithShift() {
         </Modal>
 
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

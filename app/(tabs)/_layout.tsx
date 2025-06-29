@@ -11,6 +11,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="home"
       screenOptions={{
       tabBarActiveTintColor: '#00B7D9',
       tabBarInactiveTintColor: '#A0A0A0',
@@ -28,8 +29,8 @@ export default function TabLayout() {
         left: 0,
         right: 0,
         height: 100,
-        borderRadius: 30,
-        backgroundColor: 'white',
+        borderRadius: 20,
+        backgroundColor: '#FFFFFF',
         shadowColor: '#000',
         shadowOpacity: 0.5,
         shadowOffset: { width: 0, height: -10 },
@@ -39,7 +40,9 @@ export default function TabLayout() {
         marginTop: 5,
         overflow: 'hidden',
       },
+      
     }}>
+      
         {/* แท็บ หน้าแรก (ไฟล์ home.tsx) */}
         <Tabs.Screen
           name="home"
@@ -49,9 +52,9 @@ export default function TabLayout() {
           }}
         />
 
-        {/* แท็บ “ตารางเวร” (ไฟล์ index.tsx) */}
+        {/* แท็บ “ตารางเวร” (ไฟล์ calendarWithShift.tsx) */}
         <Tabs.Screen
-          name="index"
+          name="CalendarWithShift"
           options={{
             title: 'ตารางเวร',
             tabBarIcon: TabIcon('calendar-alt'),
@@ -65,6 +68,20 @@ export default function TabLayout() {
             title: 'รายชื่อหมอ',
             tabBarIcon: TabIcon('user-md'),
           }}
+        />
+
+        {/* แท็บ “ตั้งค่า” */}
+        <Tabs.Screen
+          name="setting"
+          options={{
+            title: 'ตั้งค่า',
+            tabBarIcon: TabIcon('cogs'),
+          }}
+        />
+
+        <Tabs.Screen
+          name="index"
+          options={{ href: null }}
         />
 
       </Tabs>

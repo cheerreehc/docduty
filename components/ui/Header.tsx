@@ -19,19 +19,17 @@ export const Header: React.FC<HeaderProps> = ({ showGreeting = true , showToday 
 
   return (
     <View style={[styles.header, compact && styles.compactHeader]}>
-      <Image
-        source={require('../../assets/images/docduty-logo.png')}
-         style={{ ...styles.logo, width: logoSize.width, height: logoSize.height }}
-      />
-      {showGreeting && (
-        <Text style={styles.welcome}>👋 สวัสดีคุณหมอ!</Text>
+       {/* 🧠 โลโก้ + ข้อความ รวมเป็นบรรทัดเดียว */}
+       {showText && (
+        <View style={styles.rowTextLogo}>
+          <Image
+            source={require('../../assets/images/docduty-logo.png')}
+            style={{ ...styles.logoInline, width: logoSize.width, height: logoSize.height }}
+          />
+          <Text style={styles.text}>{text}</Text>
+        </View>
       )}
-      {showToday && (
-        <Text style={styles.date}>📅 {formattedDate}</Text>
-      )}
-      {showText && (
-        <Text style={styles.text}>{text}</Text>
-      )}
+    <View/>
     </View>
   );
 };
@@ -51,6 +49,14 @@ const styles = StyleSheet.create({
     height: 70,
     resizeMode: 'contain',
     marginBottom: 5,
+  },
+  rowTextLogo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  logoInline: {
+    resizeMode: 'contain',
   },
   compactHeader: {
     paddingVertical: 10,    
