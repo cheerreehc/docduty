@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useShift } from './ShiftContext';
 
 /* ───── TYPE ───── */
 type DutyTypeContextType = {
@@ -47,13 +48,21 @@ export const DutyTypeProvider = ({ children }: { children: React.ReactNode }) =>
     setDutyTypes((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const { renameDutyType } = useShift();
+
   const updateDutyType = (index: number, newName: string) => {
     setDutyTypes((prev) => {
       const copy = [...prev];
-      copy[index] = newName.trim();
+      const oldName = copy[index];
+      const trimmed = newName.trim();
+      if (!trimmed || oldName === trimmed) return prev;
+
+      renameDutyType(oldName, trimmed); // ✅ sync ไปยัง shifts ด้วย
+      copy[index] = trimmed;
       return copy;
     });
   };
+
 
   const clearAllDutyTypes = () => setDutyTypes([]);
 

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
+import { useShift } from './ShiftContext';
 
 export type Doctor = {
   id: string; 
@@ -11,54 +11,44 @@ export type Doctor = {
   color?: string;
 };
 
-type ShiftByDate = {
-  [date: string]: {
-    [dutyType: string]: string[]; // เช่น 'ICU': ['docId1', 'docId2']
-  };
-}
-
 type DoctorContextType = {
   doctors: Doctor[];
-  addDoctor: (n: Omit<Doctor, 'id'>) => void; // ✅ ไม่ต้องส่ง id มา
+  addDoctor: (n: Omit<Doctor, 'id'>) => void;
   removeDoctor: (n: Doctor) => void;
   clearAllDoctors: () => void;
   updateDoctor: (id: string, newDoctor: Omit<Doctor, 'id'>) => void;
-  shifts: ShiftByDate;
-  setShifts: React.Dispatch<React.SetStateAction<ShiftByDate>>;
 };
 
 const Ctx = createContext<DoctorContextType | undefined>(undefined);
 
 export const DoctorProvider = ({ children }: { children: React.ReactNode }) => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [shifts, setShifts] = useState<ShiftByDate>({});
   const [ready, setReady] = useState(false);
 
-  /* ── LOAD ── */
+  const { shifts, setShifts } = useShift(); // ✅ ดึงจาก ShiftContext
+  const { removeDoctorFromAllShifts } = useShift();
+
+  // ── LOAD ──
   useEffect(() => {
     (async () => {
       try {
-        const [[, d], [, s]] = await AsyncStorage.multiGet([
-          'docduty-doctors',
-          'docduty-shifts-v2', // ✅ เปลี่ยน key เพื่อแยกจากโครงสร้างเก่า
-        ]);
+        const [[, d]] = await AsyncStorage.multiGet(['docduty-doctors']);
         if (d) setDoctors(JSON.parse(d) as Doctor[]);
-        if (s) setShifts(JSON.parse(s));
       } finally {
         setReady(true);
       }
     })();
   }, []);
 
-  /* ── SAVE ── */
+  // ── SAVE ──
   useEffect(() => {
     if (!ready) return;
-    AsyncStorage.multiSet([
-      ['docduty-doctors', JSON.stringify(doctors)],
-      ['docduty-shifts-v2', JSON.stringify(shifts)],
-    ]).catch((e) => console.error('save error', e));
-  }, [doctors, shifts, ready]);
+    AsyncStorage.setItem('docduty-doctors', JSON.stringify(doctors)).catch((e) =>
+      console.error('save error', e)
+    );
+  }, [doctors, ready]);
 
+  // ── FUNCTIONS ──
   const addDoctor = (n: Omit<Doctor, 'id'>) => {
     const newDoctor: Doctor = { ...n, id: Date.now().toString() };
     setDoctors((prev) =>
@@ -68,7 +58,6 @@ export const DoctorProvider = ({ children }: { children: React.ReactNode }) => {
     );
   };
 
-
   const updateDoctor = (id: string, newDoctor: Omit<Doctor, 'id'>) => {
     setDoctors((prev) =>
       prev.map((doc) =>
@@ -77,11 +66,13 @@ export const DoctorProvider = ({ children }: { children: React.ReactNode }) => {
     );
   };
 
-
   const removeDoctor = (n: Doctor) => {
     setDoctors((prev) => prev.filter((d) => d.id !== n.id));
+    removeDoctorFromAllShifts(n.id);
+
+    // ✅ ลบ doctor จาก shifts ทั้งหมด
     setShifts((prev) => {
-      const out: ShiftByDate = {};
+      const out: typeof prev = {};
       Object.entries(prev).forEach(([date, duties]) => {
         const newDuties: typeof duties = {};
         Object.entries(duties).forEach(([type, ids]) => {
@@ -96,7 +87,6 @@ export const DoctorProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
-
   const clearAllDoctors = () => {
     setDoctors([]);
     setShifts({});
@@ -105,9 +95,7 @@ export const DoctorProvider = ({ children }: { children: React.ReactNode }) => {
   if (!ready) return null;
 
   return (
-    <Ctx.Provider
-      value={{ doctors, addDoctor, removeDoctor, clearAllDoctors, updateDoctor, shifts, setShifts }}
-    >
+    <Ctx.Provider value={{ doctors, addDoctor, removeDoctor, clearAllDoctors, updateDoctor }}>
       {children}
     </Ctx.Provider>
   );

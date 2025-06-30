@@ -1,9 +1,22 @@
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import buddhistEra from 'dayjs/plugin/buddhistEra';
+import updateLocale from 'dayjs/plugin/updateLocale';
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
+dayjs.extend(buddhistEra);
+dayjs.extend(updateLocale);
 dayjs.locale('th');
+
+dayjs.updateLocale('th', {
+  formats: {
+    BBBB: 'BBBB', // fake เพื่อให้ไม่ error
+    LLLL: 'D MMMM BBBB',
+  },
+  // 👇 ใช้จริงคือฟังก์ชันด้านล่าง
+  yearFormat: 'BBBB',
+});
 
 type HeaderProps = {
   showGreeting?: boolean;
@@ -15,7 +28,9 @@ type HeaderProps = {
 };
 
 export const Header: React.FC<HeaderProps> = ({ showGreeting = true , showToday = true , logoSize = { width: 200, height: 70 } , showText = true, text = 'under logo text', compact = false}) => {
-  const formattedDate = dayjs().format('D MMMM BBBB');
+  const formattedDate = dayjs()
+  .locale('th')
+  .format('D MMMM ') + (dayjs().year() + 543);
 
   return (
     <View style={[styles.header, compact && styles.compactHeader]}>
@@ -29,7 +44,9 @@ export const Header: React.FC<HeaderProps> = ({ showGreeting = true , showToday 
           <Text style={styles.text}>{text}</Text>
         </View>
       )}
-    <View/>
+       {showToday && (
+        <Text style={styles.date}>{formattedDate}</Text>
+      )}
     </View>
   );
 };

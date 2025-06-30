@@ -1,6 +1,7 @@
 import { Header } from '@/components/ui/Header';
 import { Doctor, useDoctor } from '@/contexts/DoctorContext';
 import { useDutyType } from '@/contexts/DutyTypeContext';
+import { useShift } from '@/contexts/ShiftContext';
 import { FontAwesome5 } from '@expo/vector-icons'; // เพิ่มตรง import ด้วย
 import React, { useState } from 'react';
 import {
@@ -29,17 +30,21 @@ export default function CalendarWithShift() {
   const [openAccordions, setOpenAccordions] = useState<number[]>([]);
 
 
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isPad = width >= 768;
   const cellW = isPad ? 80 : 46;
   const cellH = isPad ? 82 : 58;
+  const isPortrait = height >= width;
+  const maxNameLengthPortrait = 6;
 
   const { dutyTypes } = useDutyType();
-  console.log('✅ dutyTypes loaded:', dutyTypes);
+  // console.log('✅ dutyTypes loaded:', dutyTypes);
 
-  const { doctors, shifts, setShifts } = useDoctor();
+  const { doctors } = useDoctor();
+  const { shifts, setShifts, updateShiftForDay } = useShift();
   
 
+  
   // สำหรับการเลือกเดือน 
   const now = new Date();
   const initMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -73,31 +78,42 @@ export default function CalendarWithShift() {
 
   const onDayPress = (day: DateData) => {
     if (dutyTypes.length === 0) {
-      console.warn('⚠️ ไม่มีประเภทเวร (dutyTypes) ให้เลือก'); 
+      console.warn('⚠️ ไม่มีประเภทเวร (dutyTypes) ให้เลือก');
       return;
     }
-    
-    setSelDate(day.dateString);
-    setSelectedDutyType(dutyTypes[0] || '');
-    const ids = shifts[day.dateString]?.[dutyTypes[0]] || [];
-    setSelDocs(getDoctorsByIds(ids));
+
+    const date = day.dateString;
+    const type = dutyTypes[0];
+    const selectedDoctors = shifts[date]?.[type] || [];
+
+    setSelDate(date); // 👉 ตั้งค่า selDate แยกทีหลังได้
+    setSelectedDutyType(type);
+    setSelDocs(getDoctorsByIds(selectedDoctors));
     setOpenAccordions([]);
     setVisible(true);
+    
   };
 
 
-    const saveDocs = () => {
-      if (selDate && selectedDutyType) {
-        setShifts(p => ({
-          ...p,
-          [selDate]: {
-            ...(p[selDate] || {}),
-            [selectedDutyType]: selDocs.map(d => d.id), // ✅
-          }
-        }));
-      setVisible(false);
-    }
+  const saveDocs = () => {
+    if (selDate && selectedDutyType) {
+      setShifts(p => ({
+        ...p,
+        [selDate]: {
+          ...(p[selDate] || {}),
+          [selectedDutyType]: selDocs.map(d => d.id),
+        }
+      }));
+    setVisible(false);
+  }
   };
+
+  const shouldSuggestRotate = !isPad && Object.values(shifts).some(dutyMap => {
+  const dutyTypesForDate = Object.values(dutyMap);
+  const tooManyDoctors = dutyTypesForDate.some(ids => ids.length > 2);
+  const tooManyTypes = dutyTypesForDate.length > 1;
+    return tooManyDoctors || tooManyTypes;
+  });
 
 
   const countByDoc = (): Record<string, { count: number; doctor: Doctor }> => {
@@ -167,8 +183,24 @@ export default function CalendarWithShift() {
           
           {/* Calendar */}
           <View style={{ flex: isPad ? 3 : undefined }}>
-            <Calendar
+            {shouldSuggestRotate && (
+              <View style={{
+                backgroundColor: '#FFF5CC',
+                padding: 8,
+                marginBottom: 10,
+                borderRadius: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8
+              }}>
+                <FontAwesome5 name="sync-alt" size={14} color="#FF9900" />
+                <Text style={{ fontSize: 12, color: '#B76E00', fontFamily: 'PKRound' }}>
+                  มีข้อมูลเยอะในเดือนนี้ — แนะนำให้หมุนจอเป็นแนวนอนเพื่อดูทั้งหมด
+                </Text>
+              </View>
+            )}
 
+            <Calendar
                 hideExtraDays={true} // ซ่อนวันที่อยู่นอกเดือน
                 // สำหรับเลือกเดือนผ่าน Modal
                 key={viewMonth}
@@ -219,6 +251,11 @@ export default function CalendarWithShift() {
                 const isToday = date.dateString === todayStr;
                 const allShifts = shifts[date.dateString] || {};
 
+                const dutyTypeCount = Object.keys(allShifts).length;
+                const doctorCount = Object.values(allShifts).reduce((sum, ids) => sum + ids.length, 0);
+                const isTinyCell = !isPad && (dutyTypeCount > 1 || doctorCount > 2);
+                const MAX_DOCTOR = isPad ? 3 : 2;
+
                 return (
                   <TouchableOpacity
                     onPress={() => onDayPress(date)}
@@ -237,21 +274,70 @@ export default function CalendarWithShift() {
                       {date.day}
                     </Text>
 
-                    {/* ✅ รายชื่อแยกตามประเภทเวร */}
                     <ScrollView style={{ marginTop: 2, maxHeight: cellH - 28 }}>
-                      {Object.entries(allShifts).map(([type, idArr], i) => {
+                      {dutyTypes
+                      .filter(type => allShifts[type]?.length > 0) // ✅ กรอง dutyType ที่มีหมอจริง
+                      .map(type => {
+                        const idArr = allShifts[type];
                         const docs = getDoctorsByIds(idArr);
-                        if (docs.length === 0) return null;
+                        const shown = docs.slice(0, MAX_DOCTOR);
+                        const hidden = docs.length - MAX_DOCTOR;
+
                         return (
-                          <View key={type} style={{ marginBottom: 2 }}>
-                            <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#555' }}>
-                              {type}
+                          <View
+                            key={type}
+                            style={{
+                              flexDirection: 'row',
+                              flexWrap: 'wrap',
+                              alignItems: 'center',
+                              marginBottom: 2,
+                            }}
+                          >
+                            <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#555', marginRight: 4 }}>
+                              {type}:
                             </Text>
-                            {docs.map(doc => (
-                              <Text key={doc.id} style={{ fontSize: 9 }}>
-                                - {doc.firstName}
-                              </Text>
-                            ))}
+
+                            {shown.map(doc => {
+                            const pillColor = doc.color || '#EEE';
+                            const showDot = isPortrait; // ✅ แนวตั้ง = dot เสมอ
+
+                            return showDot ? (
+                              <View
+                                key={doc.id}
+                                style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: 4,
+                                  backgroundColor: pillColor,
+                                  marginRight: 4,
+                                }}
+                              />
+                            ) : (
+                              <View
+                                key={doc.id}
+                                style={{
+                                  backgroundColor: pillColor,
+                                  borderRadius: 10,
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 2,
+                                  maxWidth: 60,
+                                  marginRight: 4,
+                                }}
+                              >
+                                <Text
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                  style={{ fontSize: 8, color: '#000' }}
+                                >
+                                  {doc.firstName}
+                                </Text>
+                              </View>
+                            );
+                          })}
+
+                            {hidden > 0 && (
+                              <Text style={{ fontSize: 8, color: '#999' }}>+{hidden}</Text>
+                            )}
                           </View>
                         );
                       })}
@@ -259,7 +345,6 @@ export default function CalendarWithShift() {
                   </TouchableOpacity>
                 );
               }}
-
             />
           </View>
 
@@ -359,19 +444,30 @@ export default function CalendarWithShift() {
                     key={doc.id}
                     disabled={isLocked}
                     onPress={() => {
-                      if (isLocked) return;
-                      const current = shifts[selDate]?.[type] || [];
-                      const updated = isSelected
-                        ? current.filter(id => id !== doc.id)
-                        : [...current, doc.id];
-                      setShifts(prev => ({
-                        ...prev,
-                        [selDate]: {
-                          ...(prev[selDate] || {}),
-                          [type]: updated,
-                        },
-                      }));
-                    }}
+                    if (!selDate || isLocked) return;
+
+                    const current = shifts[selDate]?.[type] || [];
+                    const updated = isSelected
+                      ? current.filter(id => id !== doc.id)
+                      : [...current, doc.id];
+
+                    if (updated.length === 0) {
+                      // ✅ ลบ dutyType ออกจากวันนั้น ถ้าไม่มีหมอแล้ว
+                      setShifts(prev => {
+                        const copy = { ...prev };
+                        if (copy[selDate]) {
+                          delete copy[selDate][type];
+                          if (Object.keys(copy[selDate]).length === 0) {
+                            delete copy[selDate]; // ลบทั้งวันถ้าไม่มี dutyType เหลือเลย
+                          }
+                        }
+                        return copy;
+                      });
+                    } else {
+                      updateShiftForDay(selDate, type, updated);
+                    }
+                  }}
+
                     style={{
                       backgroundColor: isSelected
                         ? bg
