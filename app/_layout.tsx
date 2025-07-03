@@ -26,15 +26,17 @@ export default function RootLayout() {
      <ShiftProvider>
         <DutyTypeProvider>
           <DoctorProvider>
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="+not-found" />
-                </Stack>
-                <StatusBar style="auto" />
-              </ThemeProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="export" options={{ title: 'ส่งออกตารางเวร' }} />
+                <Stack.Screen name="ExportPreviewScreen" options={{ title: 'Preview ตารางเวร' }} />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
           </DoctorProvider>
         </DutyTypeProvider>
-    </ShiftProvider>
+      </ShiftProvider>
   );
 }
